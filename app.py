@@ -26,7 +26,7 @@ def load_data():
 
 df = load_data()
 
-st.title('Financial Inclusion Analysis - Mexico 2024')
+st.title('Financial Inclusion Analysis - Mexico, June 2024')
 
 # 1. Population Demographics
 st.header('1. Population demographics')
@@ -354,6 +354,340 @@ fig.update_layout(
 
 st.plotly_chart(fig)
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+
+@st.cache_data
+def load_data():
+    df = pd.read_csv("Base_de_Datos_de_Inclusion_Financiera_202406 - Hoja 1.csv")
+    return df
+
+df = load_data()
+
+year_col = "Periodo_Año"
+quarter_col = "Periodo_Trimestre"
+
+# Filter data according to rules:
+df_filtered = pd.DataFrame()
+for year in df[year_col].unique():
+    if year == 2024:
+        df_year = df[(df[year_col] == year) & (df[quarter_col] == "2T")]
+    else:
+        df_year = df[(df[year_col] == year) & (df[quarter_col] == "4T")]
+    df_filtered = pd.concat([df_filtered, df_year], ignore_index=True)
+
+df_filtered = df_filtered.sort_values(by=year_col)
+
+# Convert year to string for categorical x-axis in bar charts
+df_filtered[year_col] = df_filtered[year_col].astype(str)
+
+# Adjust column selections (modify indices as per your actual data structure)
+infrastructure_cols = df_filtered.columns[3:11]
+infra_map = {
+    "Branches": infrastructure_cols[0],
+    "ATMs": infrastructure_cols[1],
+    "POS": infrastructure_cols[2],
+    "Places with POS": infrastructure_cols[3],
+    "Banking agents (corresponsales)": infrastructure_cols[4],
+    "Mobile banking contracts": infrastructure_cols[5],
+    "Transactions in ATMs": infrastructure_cols[6],
+    "Transactions in POS": infrastructure_cols[7]
+}
+
+captacion_types = df_filtered.columns[11:18]
+captacion_total = df_filtered.columns[18]
+captacion_map = {
+    "Ahorro": captacion_types[0],
+    "Plazo": captacion_types[1],
+    "N1": captacion_types[2],
+    "N2": captacion_types[3],
+    "N3": captacion_types[4],
+    "Tradicionales": captacion_types[5],
+    "Simplificadas": captacion_types[6],
+    "Total": captacion_total
+}
+
+credit_start_col = "Crédito\nBanca_Tarjeta de crédito"
+credit_end_col = "Crédito\nBanca_Total"
+credit_cols = df_filtered.loc[:, credit_start_col:credit_end_col].columns[:-1]
+credit_total_col = df_filtered.loc[:, credit_start_col:credit_end_col].columns[-1]
+
+credit_map = {}
+for c in credit_cols:
+    short_label = c.replace("Crédito\nBanca_", "").strip()
+    credit_map[short_label] = c
+credit_map["Total"] = credit_total_col
+
+# EACP Captación mapping
+captacion_eacp_cols = df_filtered.columns[19:23]  # Columns T to W
+captacion_eacp_map = {
+    "Ahorro EACP": captacion_eacp_cols[0],
+    "Plazo EACP": captacion_eacp_cols[1],
+    "Otras EACP": captacion_eacp_cols[2],
+    "Total EACP": captacion_eacp_cols[3]
+}
+
+# EACP Crédito mapping
+credito_eacp_cols = df_filtered.columns[31:37]  # Columns AF to AK
+credito_eacp_map = {}
+for c in credito_eacp_cols[:-1]:  # Exclude the total
+    short_label = c.replace("Crédito\nEACP_", "").strip()
+    credito_eacp_map[short_label] = c
+credito_eacp_map["Total"] = credito_eacp_cols[-1]  # Add total separately
+
+st.title("Financial Inclusion Analysis - Mexico, historical data")
+
+###################################
+# Infrastructure (Single Dropdown)
+###################################
+st.header("Infrastructure trends")
+infra_choice = st.selectbox("Select type of infrastructure:", list(infra_map.keys()), index=0)
+
+infra_col = infra_map[infra_choice]
+infra_df = df_filtered[[year_col, infra_col]].copy()
+# Single type: just show a bar chart with year on x and the value on y
+fig_infra = px.bar(infra_df, x=year_col, y=infra_col, 
+                   title=f"Infrastructure: {infra_choice}", 
+                   color_discrete_sequence=["#CCCCCC"])  # Changed to light grey
+fig_infra.update_layout(
+    barmode='group',
+    xaxis_title='year',
+    yaxis_title='number of units'
+)
+st.plotly_chart(fig_infra, use_container_width=True)
+
+###################################
+# Captación (Single Dropdown)
+###################################
+st.header("Trends for 'Captación' - Banca")
+capt_choice = st.selectbox("Select a type of 'Captación' (or total):", list(captacion_map.keys()), index=0)
+
+if capt_choice == "Total":
+    # Use total column directly (column S)
+    capt_total_df = df_filtered[[year_col, captacion_total]].copy()
+    fig_capt = px.bar(capt_total_df, x=year_col, y=captacion_total, 
+                      title="Total Captación Banca",
+                      color_discrete_sequence=["#1f77b4"])
+    fig_capt.update_layout(
+        xaxis_title='year',
+        yaxis_title='number of accounts'
+    )
+    st.plotly_chart(fig_capt, use_container_width=True)
+    st.markdown("""
+        **Note:** The total is composed of:
+        - Ahorro (Savings)
+        - Plazo (Term deposits)
+        - Tradicionales (Traditional)
+        - Simplificadas (Simplified)
+        
+        Where N1, N2, and N3 accounts make up the Simplified accounts category.
+    """)
+else:
+    # Single type chart remains the same
+    capt_col = captacion_map[capt_choice]
+    capt_df = df_filtered[[year_col, capt_col]].copy()
+    fig_capt = px.bar(capt_df, x=year_col, y=capt_col, 
+                      title=f"Captación: {capt_choice}",
+                      color_discrete_sequence=["#1f77b4"])
+    fig_capt.update_layout(
+        xaxis_title='year',
+        yaxis_title='number of accounts'
+    )
+    st.plotly_chart(fig_capt, use_container_width=True)
+
+###################################
+# Captación EACP (Single Dropdown)
+###################################
+st.header("Trends for 'Captación' - Entidades de Ahorro y Crédito Popular")
+capt_eacp_choice = st.selectbox("Select a type of 'Captación' (or total):", list(captacion_eacp_map.keys()), index=0)
+
+if capt_eacp_choice == "Total EACP":
+    # Use column W directly
+    capt_eacp_total_df = df_filtered[[year_col, captacion_eacp_map["Total EACP"]]].copy()
+    fig_capt_eacp = px.bar(capt_eacp_total_df, x=year_col, y=captacion_eacp_map["Total EACP"],
+                          title="Total Captación EACP",
+                          color_discrete_sequence=['#2ca02c'])
+    fig_capt_eacp.update_layout(
+        xaxis_title='year',
+        yaxis_title='number of accounts'
+    )
+    st.plotly_chart(fig_capt_eacp, use_container_width=True)
+else:
+    # Single type remains the same
+    capt_eacp_col = captacion_eacp_map[capt_eacp_choice]
+    capt_eacp_df = df_filtered[[year_col, capt_eacp_col]].copy()
+    fig_capt_eacp = px.bar(capt_eacp_df, x=year_col, y=capt_eacp_col,
+                          title=f"Captación EACP: {capt_eacp_choice}",
+                          color_discrete_sequence=['#2ca02c'])
+    fig_capt_eacp.update_layout(
+        xaxis_title='year',
+        yaxis_title='number of accounts'
+    )
+    st.plotly_chart(fig_capt_eacp, use_container_width=True)
+
+###################################
+# Crédito (Single Dropdown)
+###################################
+st.header("Trends for 'Crédito' - Banca")
+credit_choice = st.selectbox("Select a type of 'Crédito' (or total):", list(credit_map.keys()), index=0)
+
+if credit_choice == "Total":
+    # Use column AE directly
+    credit_total_df = df_filtered[[year_col, credit_total_col]].copy()
+    fig_credit = px.bar(credit_total_df, x=year_col, y=credit_total_col,
+                       title="Total Crédito Banca",
+                       color_discrete_sequence=["#1f77b4"])
+    fig_credit.update_layout(
+        xaxis_title='year',
+        yaxis_title='number of credits'
+    )
+    st.plotly_chart(fig_credit, use_container_width=True)
+else:
+    # Single type remains the same
+    credit_col = credit_map[credit_choice]
+    credit_df = df_filtered[[year_col, credit_col]].copy()
+    fig_credit = px.bar(credit_df, x=year_col, y=credit_col,
+                       title=f"Crédito: {credit_choice}",
+                       color_discrete_sequence=["#1f77b4"])
+    fig_credit.update_layout(
+        xaxis_title='year',
+        yaxis_title='number of credits'
+    )
+    st.plotly_chart(fig_credit, use_container_width=True)
+
+###################################
+# Crédito EACP (Single Dropdown)
+###################################
+st.header("Trends for 'Crédito' - Entidades de Ahorro y Crédito Popular")
+# Modify the map to only include AF to AI and total AJ
+credito_eacp_map = {}
+for c in credito_eacp_cols[0:4]:  # Only take AF to AI
+    short_label = c.replace("Crédito\nEACP_", "").strip() + " EACP"
+    credito_eacp_map[short_label] = c
+credito_eacp_map["Total EACP"] = credito_eacp_cols[-2]  # Add AJ as total
+
+credit_eacp_choice = st.selectbox("Select a type of 'Crédito' (or total):", list(credito_eacp_map.keys()), index=0)
+
+if credit_eacp_choice == "Total EACP":
+    # Use column AJ directly
+    credit_eacp_total_col = credito_eacp_cols[-2]  # This is column AJ
+    credit_eacp_total_df = df_filtered[[year_col, credit_eacp_total_col]].copy()
+    fig_credit_eacp = px.bar(credit_eacp_total_df, x=year_col, y=credit_eacp_total_col,
+                            title="Total Crédito EACP",
+                            color_discrete_sequence=['#2ca02c'])
+    fig_credit_eacp.update_layout(
+        xaxis_title='year',
+        yaxis_title='number of credits'
+    )
+    st.plotly_chart(fig_credit_eacp, use_container_width=True)
+else:
+    # Single type remains the same
+    credit_eacp_col = credito_eacp_map[credit_eacp_choice]
+    credit_eacp_df = df_filtered[[year_col, credit_eacp_col]].copy()
+    fig_credit_eacp = px.bar(credit_eacp_df, x=year_col, y=credit_eacp_col,
+                            title=f"Crédito: {credit_eacp_choice}",
+                            color_discrete_sequence=['#2ca02c'])
+    fig_credit_eacp.update_layout(
+        xaxis_title='year',
+        yaxis_title='number of credits'
+    )
+    st.plotly_chart(fig_credit_eacp, use_container_width=True)
+
+###################################
+# Gender Analysis - Cards
+###################################
+st.header("Gender Analysis - Debit and Credit Cards")
+
+# Filter data according to rules (4T except 2024 which is 2T)
+df_gender = pd.DataFrame()
+for year in df[year_col].unique():
+    if year == 2024:
+        df_year = df[(df[year_col] == year) & (df[quarter_col] == "2T")]
+    else:
+        df_year = df[(df[year_col] == year) & (df[quarter_col] == "4T")]
+    df_gender = pd.concat([df_gender, df_year], ignore_index=True)
+
+# Create DataFrames for debit and credit cards
+debit_data = pd.DataFrame({
+    'Year': df_gender[year_col],
+    'Women': df_gender.iloc[:, 46].str.replace(',', '').astype(float),
+    'Men': df_gender.iloc[:, 47].str.replace(',', '').astype(float)
+})
+
+credit_data = pd.DataFrame({
+    'Year': df_gender[year_col],
+    'Women': df_gender.iloc[:, 49].str.replace(',', '').astype(float),
+    'Men': df_gender.iloc[:, 50].str.replace(',', '').astype(float)
+})
+
+# Filter from 2018 onwards and sort
+debit_data = debit_data[debit_data['Year'] >= 2018].sort_values('Year')
+credit_data = credit_data[credit_data['Year'] >= 2018].sort_values('Year')
+
+# Calculate percentages for debit cards
+debit_data['Total'] = debit_data['Men'] + debit_data['Women']
+debit_data['Men %'] = (debit_data['Men'] / debit_data['Total'] * 100).round(1)
+debit_data['Women %'] = (debit_data['Women'] / debit_data['Total'] * 100).round(1)
+
+# Calculate percentages for credit cards
+credit_data['Total'] = credit_data['Men'] + credit_data['Women']
+credit_data['Men %'] = (credit_data['Men'] / credit_data['Total'] * 100).round(1)
+credit_data['Women %'] = (credit_data['Women'] / credit_data['Total'] * 100).round(1)
+
+# Debit Cards Analysis
+st.subheader("Debit cards by gender")
+
+# Line chart for debit cards (separate lines for men and women)
+fig_debit_line = px.line(debit_data, x='Year', y=['Women', 'Men'],
+                    title='Debit cards by gender over time',
+                    color_discrete_map={'Women': '#ff7f0e', 'Men': '#1f77b4'})
+fig_debit_line.update_layout(
+    xaxis_title='year',
+    yaxis_title='number of cards',
+    legend_title='gender'
+)
+st.plotly_chart(fig_debit_line, use_container_width=True)
+
+# Stacked bar chart for debit cards (percentages)
+fig_debit_bar = px.bar(debit_data, x='Year', y=['Women %', 'Men %'],
+                       title='Debit cards by gender over time (% distribution)',
+                       color_discrete_map={'Women %': '#ff7f0e', 'Men %': '#1f77b4'})
+fig_debit_bar.update_layout(
+    xaxis_title='year',
+    yaxis_title='percentage',
+    barmode='stack',
+    legend_title='gender',
+    yaxis_range=[0, 100]  # Force y-axis to be 0-100%
+)
+st.plotly_chart(fig_debit_bar, use_container_width=True)
+
+# Credit Cards Analysis
+st.subheader("Credit cards by gender")
+
+# Line chart for credit cards (separate lines for men and women)
+fig_credit_line = px.line(credit_data, x='Year', y=['Women', 'Men'],
+                     title='Credit cards by gender over time',
+                     color_discrete_map={'Women': '#ff7f0e', 'Men': '#1f77b4'})
+fig_credit_line.update_layout(
+    xaxis_title='year',
+    yaxis_title='number of cards',
+    legend_title='gender'
+)
+st.plotly_chart(fig_credit_line, use_container_width=True)
+
+# Stacked bar chart for credit cards (percentages)
+fig_credit_bar = px.bar(credit_data, x='Year', y=['Women %', 'Men %'],
+                        title='Credit cards by gender over time (% distribution)',
+                        color_discrete_map={'Women %': '#ff7f0e', 'Men %': '#1f77b4'})
+fig_credit_bar.update_layout(
+    xaxis_title='year',
+    yaxis_title='percentage',
+    barmode='stack',
+    legend_title='gender',
+    yaxis_range=[0, 100]  # Force y-axis to be 0-100%
+)
+st.plotly_chart(fig_credit_bar, use_container_width=True)
 # Footer
 st.markdown(
     'Made by [Valentin Mendez](https://www.linkedin.com/in/valentemendez/) using information from the [CNBV](https://datos.gob.mx/busca/organization/2a93da6c-8c17-4671-a334-984536ac9d61?tags=inclusion)'
