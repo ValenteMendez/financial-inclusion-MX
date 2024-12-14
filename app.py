@@ -341,7 +341,7 @@ st.write(bottom_3_fi)
 # Add bar chart for all states (excluding "Sin identificar")
 fig = px.bar(df_filtered.sort_values('FI_Index', ascending=False), 
              y='FI_Index',
-             title='Financial Inclusion Index by State',
+             title='Financial Inclusion Index by state',
              color_discrete_sequence=['#90EE90'])  # Light green color
 
 fig.update_layout(
