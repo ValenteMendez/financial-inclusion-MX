@@ -301,7 +301,7 @@ st.write(bottom_3_fi)
 
 # Footer
 st.markdown(
-    'Made by [Valentin Mendez](https://www.linkedin.com/in/valentemendez/) using information from [CNBV](https://datos.gob.mx/busca/organization/2a93da6c-8c17-4671-a334-984536ac9d61?tags=inclusion)'
+    'Made by [Valentin Mendez](https://www.linkedin.com/in/valentemendez/) using information from the [CNBV](https://datos.gob.mx/busca/organization/2a93da6c-8c17-4671-a334-984536ac9d61?tags=inclusion)'
 )
 
 # Hide the "Made with Streamlit" footer
