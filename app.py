@@ -688,9 +688,142 @@ fig_credit_bar.update_layout(
     yaxis_range=[0, 100]  # Force y-axis to be 0-100%
 )
 st.plotly_chart(fig_credit_bar, use_container_width=True)
+
+# Add new section for Cards Analysis
+st.header("Cards analysis - brand distribution")
+
+# Load the analysis data
+analysis_df = pd.read_csv('Consulta_20241224-151312014 - Analysis.csv')
+
+# Credit Cards Total Trend
+
+# Create DataFrame for credit total trend
+credit_total_data = pd.DataFrame({
+    'Year': analysis_df.columns[1:],  # Years from 2006 to 2024
+    'Total Cards': analysis_df.iloc[0, 1:].values  # Total credit cards data
+})
+
+# Create line chart for credit total
+fig_credit_total = px.line(
+    credit_total_data,
+    x='Year',
+    y='Total Cards',
+    title="Total credit cards",
+)
+fig_credit_total.update_layout(
+    xaxis_title="year",
+    yaxis_title="number of cards",
+    showlegend=False,
+    xaxis={'tickmode': 'linear', 'dtick': 1}  # Show all years
+)
+st.plotly_chart(fig_credit_total, use_container_width=True)
+
+# Credit Cards Distribution
+view_type_credit = st.radio("Select view type", ['Absolute numbers', 'Percentage'], key="credit_view")
+
+# Prepare data for credit cards distribution
+credit_brands_data = pd.DataFrame({
+    'Year': analysis_df.columns[1:],
+    'Mastercard': analysis_df.iloc[1, 1:].values,
+    'Visa': analysis_df.iloc[2, 1:].values,
+    'Other Brands': analysis_df.iloc[3, 1:].values
+}).melt('Year', var_name='Brand', value_name='Cards')
+
+if view_type_credit == 'Percentage':
+    # Calculate percentages
+    total = credit_brands_data.groupby('Year')['Cards'].transform('sum')
+    credit_brands_data['Cards'] = (credit_brands_data['Cards'] / total * 100).round(0)
+
+# Create stacked bar chart for credit distribution
+fig_credit_dist = px.bar(
+    credit_brands_data,
+    x='Year',
+    y='Cards',
+    color='Brand',
+    title="Credit cards distribution by brand",
+    labels={
+        "Year": "year",
+        "Cards": "percentage" if view_type_credit == 'Percentage' else "units"
+    },
+    barmode='stack',
+    color_discrete_map={
+        'Mastercard': '#FF0000',
+        'Visa': '#0066CC',
+        'Other Brands': '#808080'
+    }
+)
+fig_credit_dist.update_layout(
+    xaxis={'tickmode': 'linear', 'dtick': 1},  # Show all years
+    yaxis_ticksuffix='%' if view_type_credit == 'Percentage' else ''
+)
+st.plotly_chart(fig_credit_dist, use_container_width=True)
+
+# Debit Cards Total Trend
+
+# Create DataFrame for debit total trend
+debit_total_data = pd.DataFrame({
+    'Year': analysis_df.columns[1:],  # Years from 2006 to 2024
+    'Total Cards': analysis_df.iloc[4, 1:].values  # Total debit cards data
+})
+
+# Create line chart for debit total
+fig_debit_total = px.line(
+    debit_total_data,
+    x='Year',
+    y='Total Cards',
+    title="Total debit cards",
+)
+fig_debit_total.update_layout(
+    xaxis_title="year",
+    yaxis_title="number of cards",
+    showlegend=False,
+    xaxis={'tickmode': 'linear', 'dtick': 1}  # Show all years
+)
+st.plotly_chart(fig_debit_total, use_container_width=True)
+
+# Debit Cards Distribution
+view_type_debit = st.radio("Select view type", ['Absolute numbers', 'Percentage'], key="debit_view")
+
+# Prepare data for debit cards distribution
+debit_brands_data = pd.DataFrame({
+    'Year': analysis_df.columns[1:],
+    'Mastercard': analysis_df.iloc[5, 1:].values,
+    'Visa': analysis_df.iloc[6, 1:].values,
+    'Other Brands': analysis_df.iloc[7, 1:].values
+}).melt('Year', var_name='Brand', value_name='Cards')
+
+if view_type_debit == 'Percentage':
+    # Calculate percentages
+    total = debit_brands_data.groupby('Year')['Cards'].transform('sum')
+    debit_brands_data['Cards'] = (debit_brands_data['Cards'] / total * 100).round(0)
+
+# Create stacked bar chart for debit distribution
+fig_debit_dist = px.bar(
+    debit_brands_data,
+    x='Year',
+    y='Cards',
+    color='Brand',
+    title="Debit cards distribution by brand",
+    labels={
+        "Year": "year",
+        "Cards": "percentage" if view_type_debit == 'Percentage' else "units"
+    },
+    barmode='stack',
+    color_discrete_map={
+        'Mastercard': '#FF0000',
+        'Visa': '#0066CC',
+        'Other Brands': '#808080'
+    }
+)
+fig_debit_dist.update_layout(
+    xaxis={'tickmode': 'linear', 'dtick': 1},  # Show all years
+    yaxis_ticksuffix='%' if view_type_debit == 'Percentage' else ''
+)
+st.plotly_chart(fig_debit_dist, use_container_width=True)
+
 # Footer
 st.markdown(
-    'Made by [Valentin Mendez](https://www.linkedin.com/in/valentemendez/) using information from the [CNBV](https://datos.gob.mx/busca/organization/2a93da6c-8c17-4671-a334-984536ac9d61?tags=inclusion)'
+    'Made by [Valentin Mendez](https://www.linkedin.com/in/valentemendez/) using information from the [CNBV](https://datos.gob.mx/busca/organization/2a93da6c-8c17-4671-a334-984536ac9d61?tags=inclusion) and [Banxico](https://www.banxico.org.mx/SieInternet/consultarDirectorioInternetAction.do?sector=21&accion=consultarDirectorioCuadros&locale=es)'
 )
 
 # Hide the "Made with Streamlit" footer
