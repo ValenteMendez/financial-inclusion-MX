@@ -821,6 +821,269 @@ fig_debit_dist.update_layout(
 )
 st.plotly_chart(fig_debit_dist, use_container_width=True)
 
+# New section for yearly totals
+st.header("Card transactional volume ($) by category")
+
+# Read the yearly totals CSV
+yearly_totals = pd.read_csv('Transacciones_totales.csv')
+
+# Dictionary for label translations
+base_translations = {
+    'Agencias de Viajes': 'Travel Agencies',
+    'Agregadores': 'Aggregators',
+    'Aseguradoras': 'Insurance',
+    'Beneficencia': 'Charity',
+    'Colegios y Universidades': 'Universities',
+    'Comida Rápida': 'Fast Food',
+    'Educación Básica': 'Basic Education',
+    'Entretenimiento': 'Entertainment',
+    'Estacionamientos': 'Parking',
+    'Farmacias': 'Pharmacies',
+    'Gasolineras': 'Gas Stations',
+    'Gobierno': 'Government',
+    'Grandes superficies': 'Department Stores',
+    'Guarderías': 'Daycare',
+    'Hospitales': 'Hospitals',
+    'Hoteles': 'Hotels',
+    'Misceláneos': 'Miscellaneous',
+    'Médicos y dentistas': 'Healthcare',
+    'No definido': 'Undefined',
+    'Otros': 'Others',
+    'Peaje': 'Toll',
+    'Refacciones y ferretería': 'Hardware Stores',
+    'Renta de Autos': 'Car Rental',
+    'Restaurantes': 'Restaurants',
+    'Salones de belleza': 'Beauty Salons',
+    'Supermercados': 'Supermarkets',
+    'Telecomunicaciones': 'Telecommunications',
+    'Transporte Aéreo': 'Air Transport',
+    'Transporte Terrestre de Pasajeros': 'Ground Transport',
+    'Ventas al detalle (Retail)': 'Retail'
+}
+
+# Create dictionaries for total, credit, and debit translations
+label_translations = {
+    f'Total de monto operado a través de tarjetas en {k}': v for k, v in base_translations.items()
+}
+credit_translations = {
+    f'Monto operado a través de tarjetas de crédito en {k}': v for k, v in base_translations.items()
+}
+debit_translations = {
+    f'Monto operado a través de tarjetas de débito en {k}': v for k, v in base_translations.items()
+}
+
+# Get total values (always from first row, columns 'Total 2023' and 'Total 2024 (eoy)')
+total_2023 = float(yearly_totals.iloc[0]['Total 2023'].replace(',', ''))
+total_2024 = float(yearly_totals.iloc[0]['Total 2024 (eoy)'].replace(',', ''))
+delta_percentage = float(yearly_totals.iloc[0]['D% 2023 to 2024'].rstrip('%'))
+
+# Display totals in trillions
+st.write(f"2023 total: {total_2023/1e12:.2f} trillion MXN")
+st.write(f"2024 total: {total_2024/1e12:.2f} trillion MXN")
+st.write(f"Year-over-year growth: {delta_percentage:.1f}%")
+
+# Create pie chart for 2024 categories
+categories_2024 = yearly_totals.iloc[1:][['Título', 'Total 2024 (eoy)', '% 2024 (eoy)']]
+categories_2024['Total 2024 (B)'] = categories_2024['Total 2024 (eoy)'].apply(lambda x: float(x.replace(',', ''))/1e9)
+categories_2024['Percentage'] = categories_2024['% 2024 (eoy)'].apply(lambda x: float(x.rstrip('%')))
+categories_2024['Clean Label'] = categories_2024['Título'].map(label_translations)
+
+# Create custom hover text
+categories_2024['hover_text'] = categories_2024.apply(
+    lambda row: f"{row['Clean Label']}<br>{row['Total 2024 (B)']:.1f}B MXN<br>{row['Percentage']:.1f}%", 
+    axis=1
+)
+
+fig_pie = px.pie(
+    categories_2024,
+    values='Total 2024 (B)',
+    names='Clean Label',
+    title="Transaction distribution by category in 2024",
+    custom_data=['hover_text']
+)
+
+# Update hover template
+fig_pie.update_traces(
+    hovertemplate="%{customdata[0]}<extra></extra>",
+    textinfo='percent+label'
+)
+
+st.plotly_chart(fig_pie, use_container_width=True)
+
+# Create bar chart for year-over-year growth by category
+growth_data = yearly_totals.iloc[1:][['Título', 'D% 2023 to 2024']]
+growth_data['Growth'] = growth_data['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')))
+growth_data['Clean Label'] = growth_data['Título'].map(label_translations)
+
+# Sort by growth percentage
+growth_data = growth_data.sort_values('Growth', ascending=True)  # ascending=True to have highest bars at top
+
+# Create bar chart
+fig_growth = px.bar(
+    growth_data,
+    x='Growth',
+    y='Clean Label',
+    orientation='h',  # horizontal bars
+    title="Year-over-year growth by category (2023 to 2024)",
+    labels={
+        "Growth": "growth (%)",
+        "Clean Label": "category"
+    }
+)
+
+fig_growth.update_traces(
+    texttemplate='%{x:.1f}%',  # Show percentage with one decimal
+    textposition='outside'      # Show text outside the bars
+)
+
+fig_growth.update_layout(
+    xaxis_title="growth (%)",
+    yaxis_title="",  # Remove y-axis title as it's redundant
+    showlegend=False
+)
+
+st.plotly_chart(fig_growth, use_container_width=True)
+
+# Credit Cards Analysis
+st.subheader("Credit card transactional volume ($)")
+
+# Read credit transactions CSV
+credit_totals = pd.read_csv('Transacciones_credito.csv')
+
+# Get credit total values (using credit_translations)
+credit_total_2023 = float(credit_totals.iloc[0]['Total 2023'].replace(',', ''))
+credit_total_2024 = float(credit_totals.iloc[0]['Total 2024 (eoy)'].replace(',', ''))
+credit_delta = float(credit_totals.iloc[0]['D% 2023 to 2024'].rstrip('%'))
+
+# Display credit totals in trillions
+st.write(f"2023 total: {credit_total_2023/1e12:.2f} trillion MXN")
+st.write(f"2024 total: {credit_total_2024/1e12:.2f} trillion MXN")
+st.write(f"Year-over-year growth: {credit_delta:.1f}%")
+
+# Create pie chart for credit categories 2024
+credit_categories = credit_totals.iloc[1:][['Título', 'Total 2024 (eoy)', '% 2024 (eoy)']]
+credit_categories['Total 2024 (B)'] = credit_categories['Total 2024 (eoy)'].apply(lambda x: float(x.replace(',', ''))/1e9)
+credit_categories['Percentage'] = credit_categories['% 2024 (eoy)'].apply(lambda x: float(x.rstrip('%')))
+credit_categories['Clean Label'] = credit_categories['Título'].map(credit_translations)
+
+credit_categories['hover_text'] = credit_categories.apply(
+    lambda row: f"{row['Clean Label']}<br>{row['Total 2024 (B)']:.1f}B MXN<br>{row['Percentage']:.1f}%", 
+    axis=1
+)
+
+fig_credit_pie = px.pie(
+    credit_categories,
+    values='Total 2024 (B)',
+    names='Clean Label',
+    title="Credit card transaction distribution by category in 2024",
+    custom_data=['hover_text']
+)
+
+fig_credit_pie.update_traces(
+    hovertemplate="%{customdata[0]}<extra></extra>",
+    textinfo='percent+label'
+)
+
+st.plotly_chart(fig_credit_pie, use_container_width=True)
+
+# Credit growth bar chart
+credit_growth = credit_totals.iloc[1:][['Título', 'D% 2023 to 2024']]
+credit_growth['Growth'] = credit_growth['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')))
+credit_growth['Clean Label'] = credit_growth['Título'].map(credit_translations)
+credit_growth = credit_growth.sort_values('Growth', ascending=True)
+
+fig_credit_growth = px.bar(
+    credit_growth,
+    x='Growth',
+    y='Clean Label',
+    orientation='h',
+    title="Credit card year-over-year growth by category (2023 to 2024)",
+    labels={"Growth": "growth (%)", "Clean Label": "category"}
+)
+
+fig_credit_growth.update_traces(
+    texttemplate='%{x:.1f}%',
+    textposition='outside'
+)
+
+fig_credit_growth.update_layout(
+    xaxis_title="growth (%)",
+    yaxis_title="",
+    showlegend=False
+)
+
+st.plotly_chart(fig_credit_growth, use_container_width=True)
+
+# Debit Cards Analysis
+st.subheader("Debit card transactional volume ($)")
+
+# Read debit transactions CSV
+debit_totals = pd.read_csv('Transacciones_debito.csv')
+
+# Get debit total values
+debit_total_2023 = float(debit_totals.iloc[0]['Total 2023'].replace(',', ''))
+debit_total_2024 = float(debit_totals.iloc[0]['Total 2024 (eoy)'].replace(',', ''))
+debit_delta = float(debit_totals.iloc[0]['D% 2023 to 2024'].rstrip('%'))
+
+# Display debit totals in trillions
+st.write(f"2023 total: {debit_total_2023/1e12:.2f} trillion MXN")
+st.write(f"2024 total: {debit_total_2024/1e12:.2f} trillion MXN")
+st.write(f"Year-over-year growth: {debit_delta:.1f}%")
+
+# Create pie chart for debit categories 2024
+debit_categories = debit_totals.iloc[1:][['Título', 'Total 2024 (eoy)', '% 2024 (eoy)']]
+debit_categories['Total 2024 (B)'] = debit_categories['Total 2024 (eoy)'].apply(lambda x: float(x.replace(',', ''))/1e9)
+debit_categories['Percentage'] = debit_categories['% 2024 (eoy)'].apply(lambda x: float(x.rstrip('%')))
+debit_categories['Clean Label'] = debit_categories['Título'].map(debit_translations)
+
+debit_categories['hover_text'] = debit_categories.apply(
+    lambda row: f"{row['Clean Label']}<br>{row['Total 2024 (B)']:.1f}B MXN<br>{row['Percentage']:.1f}%", 
+    axis=1
+)
+
+fig_debit_pie = px.pie(
+    debit_categories,
+    values='Total 2024 (B)',
+    names='Clean Label',
+    title="Debit card transaction distribution by category in 2024",
+    custom_data=['hover_text']
+)
+
+fig_debit_pie.update_traces(
+    hovertemplate="%{customdata[0]}<extra></extra>",
+    textinfo='percent+label'
+)
+
+st.plotly_chart(fig_debit_pie, use_container_width=True)
+
+# Debit growth bar chart
+debit_growth = debit_totals.iloc[1:][['Título', 'D% 2023 to 2024']]
+debit_growth['Growth'] = debit_growth['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')))
+debit_growth['Clean Label'] = debit_growth['Título'].map(debit_translations)
+debit_growth = debit_growth.sort_values('Growth', ascending=True)
+
+fig_debit_growth = px.bar(
+    debit_growth,
+    x='Growth',
+    y='Clean Label',
+    orientation='h',
+    title="Debit card year-over-year growth by category (2023 to 2024)",
+    labels={"Growth": "growth (%)", "Clean Label": "category"}
+)
+
+fig_debit_growth.update_traces(
+    texttemplate='%{x:.1f}%',
+    textposition='outside'
+)
+
+fig_debit_growth.update_layout(
+    xaxis_title="growth (%)",
+    yaxis_title="",
+    showlegend=False
+)
+
+st.plotly_chart(fig_debit_growth, use_container_width=True)
+
 # Footer
 st.markdown(
     'Made by [Valentin Mendez](https://www.linkedin.com/in/valentemendez/) using information from the [CNBV](https://datos.gob.mx/busca/organization/2a93da6c-8c17-4671-a334-984536ac9d61?tags=inclusion) and [Banxico](https://www.banxico.org.mx/SieInternet/consultarDirectorioInternetAction.do?sector=21&accion=consultarDirectorioCuadros&locale=es)'
