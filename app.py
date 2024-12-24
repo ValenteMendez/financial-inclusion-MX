@@ -689,7 +689,7 @@ fig_credit_bar.update_layout(
 )
 st.plotly_chart(fig_credit_bar, use_container_width=True)
 
-# Add new section for Cards Analysis
+# Cards analysis - brand distribution
 st.header("Cards analysis - brand distribution")
 
 # Load the analysis data
@@ -730,9 +730,11 @@ credit_brands_data = pd.DataFrame({
 }).melt('Year', var_name='Brand', value_name='Cards')
 
 if view_type_credit == 'Percentage':
-    # Calculate percentages
-    total = credit_brands_data.groupby('Year')['Cards'].transform('sum')
-    credit_brands_data['Cards'] = (credit_brands_data['Cards'] / total * 100).round(0)
+    # Calculate percentages by year
+    credit_brands_data['Cards'] = credit_brands_data['Cards'].astype(float)  # Convert to float first
+    credit_brands_data['Cards'] = credit_brands_data.groupby('Year').apply(
+        lambda x: (x['Cards'] / x['Cards'].sum() * 100).round(1)
+    ).reset_index(level=0, drop=True)
 
 # Create stacked bar chart for credit distribution
 fig_credit_dist = px.bar(
@@ -793,9 +795,11 @@ debit_brands_data = pd.DataFrame({
 }).melt('Year', var_name='Brand', value_name='Cards')
 
 if view_type_debit == 'Percentage':
-    # Calculate percentages
-    total = debit_brands_data.groupby('Year')['Cards'].transform('sum')
-    debit_brands_data['Cards'] = (debit_brands_data['Cards'] / total * 100).round(0)
+    # Calculate percentages by year
+    debit_brands_data['Cards'] = debit_brands_data['Cards'].astype(float)  # Convert to float first
+    debit_brands_data['Cards'] = debit_brands_data.groupby('Year').apply(
+        lambda x: (x['Cards'] / x['Cards'].sum() * 100).round(1)
+    ).reset_index(level=0, drop=True)
 
 # Create stacked bar chart for debit distribution
 fig_debit_dist = px.bar(
