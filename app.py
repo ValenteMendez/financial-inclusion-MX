@@ -916,34 +916,34 @@ st.plotly_chart(fig_pie, use_container_width=True)
 
 # Create bar chart for year-over-year growth by category
 growth_data = yearly_totals.iloc[1:][['Título', 'D% 2023 to 2024']]
-growth_data['Growth'] = growth_data['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')))
+growth_data['Growth'] = growth_data['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')) if isinstance(x, str) else x)
 growth_data['Clean Label'] = growth_data['Título'].map(label_translations)
+growth_data = growth_data.dropna()  # Remove any NaN values
+# Exclude "Undefined" category
+growth_data = growth_data[growth_data['Clean Label'] != 'Undefined']
+growth_data = growth_data.sort_values('Growth', ascending=True)
 
-# Sort by growth percentage
-growth_data = growth_data.sort_values('Growth', ascending=True)  # ascending=True to have highest bars at top
-
-# Create bar chart
+# Create bar chart with increased height
 fig_growth = px.bar(
     growth_data,
     x='Growth',
     y='Clean Label',
-    orientation='h',  # horizontal bars
-    title="Year-over-year growth by category (2023 to 2024)",
-    labels={
-        "Growth": "growth (%)",
-        "Clean Label": "category"
-    }
+    orientation='h',
+    title="Year-over-year growth by category (2023 to 2024), excluding 'Undefined'",
+    labels={"Growth": "growth (%)", "Clean Label": "category"}
 )
 
 fig_growth.update_traces(
-    texttemplate='%{x:.1f}%',  # Show percentage with one decimal
-    textposition='outside'      # Show text outside the bars
+    texttemplate='%{x:.1f}%',
+    textposition='outside'
 )
 
 fig_growth.update_layout(
     xaxis_title="growth (%)",
-    yaxis_title="",  # Remove y-axis title as it's redundant
-    showlegend=False
+    yaxis_title="",
+    showlegend=False,
+    height=800,  # Increased height to accommodate all categories
+    margin=dict(l=50, r=50, t=50, b=50)
 )
 
 st.plotly_chart(fig_growth, use_container_width=True)
@@ -992,8 +992,11 @@ st.plotly_chart(fig_credit_pie, use_container_width=True)
 
 # Credit growth bar chart
 credit_growth = credit_totals.iloc[1:][['Título', 'D% 2023 to 2024']]
-credit_growth['Growth'] = credit_growth['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')))
+credit_growth['Growth'] = credit_growth['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')) if isinstance(x, str) else x)
 credit_growth['Clean Label'] = credit_growth['Título'].map(credit_translations)
+credit_growth = credit_growth.dropna()
+# Exclude "Undefined" category
+credit_growth = credit_growth[credit_growth['Clean Label'] != 'Undefined']
 credit_growth = credit_growth.sort_values('Growth', ascending=True)
 
 fig_credit_growth = px.bar(
@@ -1001,7 +1004,7 @@ fig_credit_growth = px.bar(
     x='Growth',
     y='Clean Label',
     orientation='h',
-    title="Credit card year-over-year growth by category (2023 to 2024)",
+    title="Credit card year-over-year growth by category (2023 to 2024), excluding 'Undefined'",
     labels={"Growth": "growth (%)", "Clean Label": "category"}
 )
 
@@ -1013,7 +1016,9 @@ fig_credit_growth.update_traces(
 fig_credit_growth.update_layout(
     xaxis_title="growth (%)",
     yaxis_title="",
-    showlegend=False
+    showlegend=False,
+    height=800,  # Increased height
+    margin=dict(l=50, r=50, t=50, b=50)
 )
 
 st.plotly_chart(fig_credit_growth, use_container_width=True)
@@ -1062,8 +1067,11 @@ st.plotly_chart(fig_debit_pie, use_container_width=True)
 
 # Debit growth bar chart
 debit_growth = debit_totals.iloc[1:][['Título', 'D% 2023 to 2024']]
-debit_growth['Growth'] = debit_growth['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')))
+debit_growth['Growth'] = debit_growth['D% 2023 to 2024'].apply(lambda x: float(x.rstrip('%')) if isinstance(x, str) else x)
 debit_growth['Clean Label'] = debit_growth['Título'].map(debit_translations)
+debit_growth = debit_growth.dropna()
+# Exclude "Undefined" category
+debit_growth = debit_growth[debit_growth['Clean Label'] != 'Undefined']
 debit_growth = debit_growth.sort_values('Growth', ascending=True)
 
 fig_debit_growth = px.bar(
@@ -1071,7 +1079,7 @@ fig_debit_growth = px.bar(
     x='Growth',
     y='Clean Label',
     orientation='h',
-    title="Debit card year-over-year growth by category (2023 to 2024)",
+    title="Debit card year-over-year growth by category (2023 to 2024), excluding 'Undefined'",
     labels={"Growth": "growth (%)", "Clean Label": "category"}
 )
 
@@ -1083,7 +1091,9 @@ fig_debit_growth.update_traces(
 fig_debit_growth.update_layout(
     xaxis_title="growth (%)",
     yaxis_title="",
-    showlegend=False
+    showlegend=False,
+    height=800,  # Increased height
+    margin=dict(l=50, r=50, t=50, b=50)
 )
 
 st.plotly_chart(fig_debit_growth, use_container_width=True)
